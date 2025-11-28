@@ -1,15 +1,20 @@
-// Database schema for Club Rank - Tennis club management platform
-// Supporting both PostgreSQL (Drizzle ORM)
+import {
+  pgTable,
+  serial,
+  varchar,
+  text,
+  integer,
+  timestamp,
+  boolean,
+} from "drizzle-orm/pg-core";
 
-import { pgTable, serial, varchar, text, integer, timestamp, boolean } from 'drizzle-orm/pg-core';
-import { createInsertSchema } from 'drizzle-zod';
-import { z } from 'zod';
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-// =============================================================================
-// DRIZZLE ORM TABLE DEFINITIONS (PostgreSQL)
-// =============================================================================
+/* -------------------------------------------------------------------------- */
+/*                               Clubs Table                                   */
+/* -------------------------------------------------------------------------- */
 
-// Clubs table - Core club information
 export const clubs = pgTable("clubs", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
@@ -21,10 +26,22 @@ export const clubs = pgTable("clubs", {
   region: varchar("region", { length: 50 }).notNull(),
   establishedAt: timestamp("established_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Club Members
+/* --------------------------- Zod Insert Schema ---------------------------- */
+
+export const insertClubSchema = createInsertSchema(clubs).omit({
+  id: true,
+  establishedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                             Club Members Table                              */
+/* -------------------------------------------------------------------------- */
+
 export const clubMembers = pgTable("club_members", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(),
@@ -33,10 +50,24 @@ export const clubMembers = pgTable("club_members", {
   joinedAt: timestamp("joined_at").defaultNow(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Club Matches
+export const insertClubMemberSchema = createInsertSchema(clubMembers)
+  .omit({
+    id: true,
+    joinedAt: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    role: z.enum(["owner", "admin", "member"]).default("member"),
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                              Club Matches Table                             */
+/* -------------------------------------------------------------------------- */
+
 export const clubMatches = pgTable("club_matches", {
   id: serial("id").primaryKey(),
   requestingClubId: integer("requesting_club_id").notNull(),
@@ -57,10 +88,38 @@ export const clubMatches = pgTable("club_matches", {
   notes: text("notes"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User Ranking Points
+export const insertClubMatchSchema = createInsertSchema(clubMatches)
+  .omit({
+    id: true,
+    completedAt: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    status: z
+      .enum(["pending", "accepted", "rejected", "completed", "cancelled"])
+      .default("pending"),
+    matchType: z
+      .enum(["friendly", "tournament", "league"])
+      .default("friendly"),
+    gameFormat: z
+      .enum([
+        "mens_singles",
+        "womens_singles",
+        "mens_doubles",
+        "womens_doubles",
+        "mixed_doubles",
+      ])
+      .default("mens_doubles"),
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                        User Ranking Points Table                            */
+/* -------------------------------------------------------------------------- */
+
 export const userRankingPoints = pgTable("user_ranking_points", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(),
@@ -71,10 +130,21 @@ export const userRankingPoints = pgTable("user_ranking_points", {
   losses: integer("losses").default(0),
   draws: integer("draws").default(0),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Match Participants
+export const insertUserRankingPointsSchema = createInsertSchema(
+  userRankingPoints
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                       Match Participants Table                              */
+/* -------------------------------------------------------------------------- */
+
 export const matchParticipants = pgTable("match_participants", {
   id: serial("id").primaryKey(),
   matchId: integer("match_id").notNull(),
@@ -84,19 +154,94 @@ export const matchParticipants = pgTable("match_participants", {
   rpBefore: integer("rp_before").notNull(),
   rpAfter: integer("rp_after").notNull(),
   rpChange: integer("rp_change").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Club Dues
+export const insertMatchParticipantsSchema = createInsertSchema(
+  matchParticipants
+).omit({ id: true, createdAt: true });
+
+/* -------------------------------------------------------------------------- */
+/*                              Club Dues Table                                */
+/* -------------------------------------------------------------------------- */
+
 export const clubDues = pgTable("club_dues", {
   id: serial("id").primaryKey(),
   clubId: integer("club_id").notNull(),
   userId: varchar("user_id", { length: 255 }).notNull(),
   amount: integer("amount").notNull(),
   dueMonth: varchar("due_month", { length: 7 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  status: varchar("status", { length: 20 }).default("pending"),
   paidAt: timestamp("paid_at"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const insertClubDuesSchema = createInsertSchema(clubDues)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: z.enum(["pending", "paid", "overdue"]).default("pending"),
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                         Club Attendance Table                               */
+/* -------------------------------------------------------------------------- */
+
+export const clubAttendance = pgTable("club_attendance", {
+  id: serial("id").primaryKey(),
+  clubId: integer("club_id").notNull(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  eventDate: timestamp("event_date").notNull(),
+  eventName: varchar("event_name", { length: 200 }).notNull(),
+  status: varchar("status", { length: 20 }).default("absent"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClubAttendanceSchema = createInsertSchema(clubAttendance)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: z.enum(["present", "absent", "late", "excused"]).default("absent"),
+    eventDate: z.coerce.date(),
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                             Club Meetings Table                             */
+/* -------------------------------------------------------------------------- */
+
+export const clubMeetings = pgTable("club_meetings", {
+  id: serial("id").primaryKey(),
+  clubId: integer("club_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  meetingDate: timestamp("meeting_date").notNull(),
+  location: varchar("location", { length: 200 }),
+  maxParticipants: integer("max_participants"),
+  participants: text("participants").array(),
+  status: varchar("status", { length: 20 }).default("scheduled"),
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClubMeetingsSchema = createInsertSchema(clubMeetings)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: z.enum(["scheduled", "completed", "cancelled"]).default("scheduled"),
+    meetingDate: z.coerce.date(),
+  });
+
+/* -------------------------------------------------------------------------- */
+/*                                Export Types                                 */
+/* -------------------------------------------------------------------------- */
+
+export type Club = typeof clubs.$inferSelect;
+export type ClubMember = typeof clubMembers.$inferSelect;
+export type ClubMatch = typeof clubMatches.$inferSelect;
+export type UserRankingPoints = typeof userRankingPoints.$inferSelect;
+export type MatchParticipants = typeof matchParticipants.$inferSelect;
+export type ClubDues = typeof clubDues.$inferSelect;
+export type ClubAttendance = typeof clubAttendance.$inferSelect;
+export type ClubMeetings = typeof clubMeetings.$inferSelect;
