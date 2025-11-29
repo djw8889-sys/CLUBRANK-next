@@ -13,7 +13,14 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@db/*": ["src/db/*"],
+      "@lib/*": ["src/lib/*"],
+      "@server/*": ["src/lib/server/*"]
+    }
   },
   "include": [
     "next-env.d.ts",
@@ -23,6 +30,6 @@
   ],
   "exclude": [
     "node_modules",
-    "drizzle.config.ts"   // ⬅️ 빌드 제외 (해결 핵심)
+    "drizzle.config.ts"
   ]
 }
