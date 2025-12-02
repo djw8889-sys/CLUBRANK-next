@@ -2,6 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 기본 바디 스타일 */
 body {
-  @apply bg-slate-950 text-slate-50;
+  margin: 0;
+  padding: 0;
+  background-color: #0a2342; /* background */
+  color: #d1d5db; /* textSecondary */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* GDLY 공통 컨테이너 - 중앙 정렬, 모바일 기준 max-width */
+.gdly-shell {
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 페이지 안쪽 패딩 (탭바 높이만큼 아래 여유) */
+.gdly-page {
+  flex: 1;
+  padding: 1rem;
+  padding-bottom: 5rem; /* 하단 탭바 영역 확보 */
+}
+
+/* 카드 공통 스타일 */
+.gdly-card {
+  background-color: #1a1f25; /* surface */
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* 섹션 제목 */
+.gdly-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+/* 뮤트 텍스트 */
+.gdly-muted {
+  font-size: 0.875rem;
+  color: #9ca3af;
 }
