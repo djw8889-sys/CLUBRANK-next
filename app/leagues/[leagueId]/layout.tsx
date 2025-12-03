@@ -1,4 +1,4 @@
-import TabBar from "components/ui/TabBar";
+import TabBar from "@/components/ui/TabBar";
 
 export default function LeagueLayout({
   children,

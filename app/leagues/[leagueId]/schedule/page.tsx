@@ -1,4 +1,4 @@
-import RoundRobinGenerator from "components/league/RoundRobinGenerator";
+import RoundRobinGenerator from "@/components/league/RoundRobinGenerator";
 
 export default function LeagueSchedulePage() {
   return (
