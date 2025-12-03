@@ -68,10 +68,8 @@ export default function CreateLeaguePage() {
       </select>
 
       <Button
-        label={loading ? "생성 중..." : "리그 생성"}
-        onClick={handleCreate}
-        disabled={loading}
-      />
-    </div>
+<Button onClick={handleCreate} disabled={loading}>
+  {loading ? "생성 중..." : "리그 생성"}
+</Button>
   );
 }
