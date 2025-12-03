@@ -13,7 +13,7 @@ export default function LeagueLayout({
     <div className="min-h-screen bg-[#0A2342] text-white p-6">
       <h1 className="text-2xl font-bold">리그 상세</h1>
 
-      {/* Tab Bar */}
+      {/* 탭바 */}
       <TabBar leagueId={leagueId} />
 
       <div className="mt-6">{children}</div>
