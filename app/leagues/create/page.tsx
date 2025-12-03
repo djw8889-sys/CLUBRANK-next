@@ -31,6 +31,7 @@ export default function CreateLeaguePage() {
     }
   }
 
+  // ⬇⬇⬇ 여기부터 return — 현재 오류는 이 위치가 깨져있었음!
   return (
     <div className="min-h-screen bg-[#0A2342] text-white p-6">
       <h1 className="text-2xl font-bold mb-4">새 리그 만들기</h1>
@@ -67,9 +68,9 @@ export default function CreateLeaguePage() {
         <option value={12}>12팀</option>
       </select>
 
-      <Button
-<Button onClick={handleCreate} disabled={loading}>
-  {loading ? "생성 중..." : "리그 생성"}
-</Button>
+      <Button onClick={handleCreate} disabled={loading} full>
+        {loading ? "생성 중..." : "리그 생성"}
+      </Button>
+    </div>
   );
 }
