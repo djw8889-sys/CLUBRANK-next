@@ -1,4 +1,5 @@
 import { db, dbSchema } from "@/lib/server/db";
+import { eq } from "drizzle-orm";
 
 export default async function LeagueOverviewPage({
   params,
@@ -7,11 +8,19 @@ export default async function LeagueOverviewPage({
 }) {
   const leagueId = Number(params.leagueId);
 
-  // DB에서 리그 정보 조회
+  if (!db) {
+    return (
+      <div className="text-center text-red-400 mt-10">
+        DB 연결 오류가 발생했습니다.
+      </div>
+    );
+  }
+
+  // DB에서 리그 정보 조회 (Drizzle 표준 문법 적용)
   const league = await db
-    ?.select()
+    .select()
     .from(dbSchema.leagues)
-    .where(dbSchema.leagues.id.eq(leagueId))
+    .where(eq(dbSchema.leagues.id, leagueId))
     .then((rows) => rows[0])
     .catch(() => null);
 
