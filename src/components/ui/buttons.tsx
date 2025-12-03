@@ -1,25 +1,41 @@
 "use client";
 
+import React from "react";
+import clsx from "clsx";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "ghost";
+  full?: boolean;
+}
+
 export default function Button({
-  label,
-  onClick,
-  disabled = false,
-}: {
-  label: string;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
+  variant = "primary",
+  full = false,
+  className,
+  children,
+  ...props
+}: ButtonProps) {
+  const base =
+    "px-4 py-2 rounded-xl font-bold transition-all duration-150 text-sm";
+
+  const variants = {
+    primary: "bg-[#9FE870] text-[#0A2342] hover:bg-[#b4f28b]",
+    secondary:
+      "border border-[#9FE870] text-[#9FE870] hover:bg-[#9FE87022]",
+    ghost: "text-[#9FE870] hover:text-white",
+  };
+
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`w-full p-3 rounded-xl font-bold text-[#0A2342] ${
-        disabled
-          ? "bg-gray-400 cursor-not-allowed"
-          : "bg-[#9FE870] hover:bg-[#b4ff8c]"
-      }`}
+      className={clsx(
+        base,
+        variants[variant],
+        full && "w-full",
+        className
+      )}
+      {...props}
     >
-      {label}
+      {children}
     </button>
   );
 }
