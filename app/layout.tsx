@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import BottomNav from "@/components/layout/BottomNav";
+import BottomNav from "components/layout/BottomNav";
 
 export const metadata: Metadata = {
   title: "GDLY – 아마추어 축구·풋살 리그 플랫폼",
