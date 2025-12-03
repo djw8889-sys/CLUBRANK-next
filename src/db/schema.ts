@@ -13,6 +13,7 @@ import { z } from "zod";
 
 /* -------------------------------------------------------------------------- */
 /*                               Clubs Table                                   */
+/*            (기존 테니스/클럽 관리용 – 그대로 유지)                          */
 /* -------------------------------------------------------------------------- */
 
 export const clubs = pgTable("clubs", {
@@ -233,6 +234,187 @@ export const insertClubMeetingsSchema = createInsertSchema(clubMeetings)
     meetingDate: z.coerce.date(),
   });
 
+/* ========================================================================== */
+/*                    GDLY 전용 – Teams / Leagues / Matches                   */
+/* ========================================================================== */
+
+/* -------------------------------------------------------------------------- */
+/*                                   Teams                                     */
+/*                 (GDLY 전용 팀 – 학교반 / 동아리 / 클럽 팀 등)               */
+/* -------------------------------------------------------------------------- */
+
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  shortName: varchar("short_name", { length: 30 }),
+  logoUrl: text("logo_url"),
+  primaryColor: varchar("primary_color", { length: 7 }),
+  secondaryColor: varchar("secondary_color", { length: 7 }),
+  homeStadium: varchar("home_stadium", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                   Leagues                                   */
+/* -------------------------------------------------------------------------- */
+
+export const leagues = pgTable("leagues", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 150 }).notNull(),
+  description: text("description"),
+  season: varchar("season", { length: 10 }).notNull(), // 예: "2025", "2024-25"
+  sportType: varchar("sport_type", { length: 20 }).notNull().default("soccer"), // soccer | futsal
+  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft | active | completed
+  totalTeams: integer("total_teams"),
+  rounds: integer("rounds"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLeagueSchema = createInsertSchema(leagues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                League Teams                                 */
+/*      (리그에 참가한 팀과 순위/스탯 – standings API에서 이 테이블을 사용)    */
+/* -------------------------------------------------------------------------- */
+
+export const leagueTeams = pgTable("league_teams", {
+  id: serial("id").primaryKey(),
+  leagueId: integer("league_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  groupName: varchar("group_name", { length: 20 }),
+  // 순위 관련 스탯
+  played: integer("played").default(0),
+  wins: integer("wins").default(0),
+  draws: integer("draws").default(0),
+  losses: integer("losses").default(0),
+  goalsFor: integer("goals_for").default(0),
+  goalsAgainst: integer("goals_against").default(0),
+  goalDiff: integer("goal_diff").default(0),
+  points: integer("points").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLeagueTeamSchema = createInsertSchema(leagueTeams).omit({
+  id: true,
+  played: true,
+  wins: true,
+  draws: true,
+  losses: true,
+  goalsFor: true,
+  goalsAgainst: true,
+  goalDiff: true,
+  points: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                   Matches                                   */
+/*              (리그 라운드로빈으로 생성되는 경기 일정/결과)                  */
+/* -------------------------------------------------------------------------- */
+
+export const matches = pgTable("matches", {
+  id: serial("id").primaryKey(),
+  leagueId: integer("league_id").notNull(),
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeamId: integer("away_team_id").notNull(),
+  round: integer("round").notNull(),
+  matchDate: timestamp("match_date"),
+  status: varchar("status", { length: 20 }).notNull().default("scheduled"), // scheduled | played | cancelled
+  homeScore: integer("home_score").default(0),
+  awayScore: integer("away_score").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMatchSchema = createInsertSchema(matches).omit({
+  id: true,
+  status: true,
+  homeScore: true,
+  awayScore: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                Match Goals                                  */
+/*      (각 경기의 득점/도움 기록 – 시즌 득점/도움 랭킹 계산에 사용)          */
+/* -------------------------------------------------------------------------- */
+
+export const matchGoals = pgTable("match_goals", {
+  id: serial("id").primaryKey(),
+  matchId: integer("match_id").notNull(),
+  teamId: integer("team_id").notNull(),
+  scorerName: varchar("scorer_name", { length: 100 }).notNull(),
+  assistName: varchar("assist_name", { length: 100 }),
+  minute: integer("minute"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMatchGoalSchema = createInsertSchema(matchGoals).omit({
+  id: true,
+  createdAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                             Match MVP Votes                                 */
+/*     (경기 종료 후 MVP 투표 – 시즌 MVP 산출용 원자료)                        */
+/* -------------------------------------------------------------------------- */
+
+export const matchMvpVotes = pgTable("match_mvp_votes", {
+  id: serial("id").primaryKey(),
+  matchId: integer("match_id").notNull(),
+  voterTeamId: integer("voter_team_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  votes: integer("votes").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMatchMvpVoteSchema = createInsertSchema(matchMvpVotes).omit({
+  id: true,
+  votes: true,
+  createdAt: true,
+});
+
+/* -------------------------------------------------------------------------- */
+/*                           League MVP Results                                */
+/*         (시즌 종료 후 최종 MVP / 득점왕 / 도움왕 집계 결과 저장)            */
+/* -------------------------------------------------------------------------- */
+
+export const leagueMvpResults = pgTable("league_mvp_results", {
+  id: serial("id").primaryKey(),
+  leagueId: integer("league_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  teamId: integer("team_id").notNull(),
+  totalMvpVotes: integer("total_mvp_votes").default(0),
+  totalGoals: integer("total_goals").default(0),
+  totalAssists: integer("total_assists").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLeagueMvpResultSchema = createInsertSchema(
+  leagueMvpResults
+).omit({
+  id: true,
+  totalMvpVotes: true,
+  totalGoals: true,
+  totalAssists: true,
+  createdAt: true,
+});
+
 /* -------------------------------------------------------------------------- */
 /*                                Export Types                                 */
 /* -------------------------------------------------------------------------- */
@@ -245,3 +427,12 @@ export type MatchParticipants = typeof matchParticipants.$inferSelect;
 export type ClubDues = typeof clubDues.$inferSelect;
 export type ClubAttendance = typeof clubAttendance.$inferSelect;
 export type ClubMeetings = typeof clubMeetings.$inferSelect;
+
+// GDLY 전용 타입
+export type Team = typeof teams.$inferSelect;
+export type League = typeof leagues.$inferSelect;
+export type LeagueTeam = typeof leagueTeams.$inferSelect;
+export type Match = typeof matches.$inferSelect;
+export type MatchGoal = typeof matchGoals.$inferSelect;
+export type MatchMvpVote = typeof matchMvpVotes.$inferSelect;
+export type LeagueMvpResult = typeof leagueMvpResults.$inferSelect;
