@@ -5,12 +5,23 @@ export async function createLeague(data: {
   season: string;
   teamCount: number;
 }) {
-  // 🔥 아직 API가 없는 상태 -> 목업 리턴
-  // 나중에 real API와 연결만 바꾸면 됨
-  console.log("리그 생성 요청:", data);
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/leagues`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-  return {
-    ok: true,
-    id: "mock-league-001",
-  };
+    const json = await res.json();
+
+    if (!res.ok) {
+      console.error(json);
+      return { ok: false };
+    }
+
+    return { ok: true, id: json.id };
+  } catch (err) {
+    console.error("createLeague error:", err);
+    return { ok: false };
+  }
 }

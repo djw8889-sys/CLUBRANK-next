@@ -2,35 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import clsx from "clsx";
+
+const tabs = [
+  { id: "overview", name: "개요", path: "" },
+  { id: "schedule", name: "일정", path: "schedule" },
+  { id: "standings", name: "순위표", path: "standings" },
+  { id: "mvp", name: "MVP", path: "mvp" },
+];
 
 export default function TabBar({ leagueId }: { leagueId: string }) {
   const pathname = usePathname();
 
-  const tabs = [
-    { name: "Overview", path: `/leagues/${leagueId}` },
-    { name: "Schedule", path: `/leagues/${leagueId}/schedule` },
-    { name: "Standings", path: `/leagues/${leagueId}/standings` },
-    { name: "MVP", path: `/leagues/${leagueId}/mvp` },
-  ];
-
   return (
-    <div className="flex justify-around bg-[#1A1F25] text-gray-300 p-3 rounded-xl mt-4">
-      {tabs.map((t) => {
-        const isActive = pathname === t.path;
+    <nav className="flex bg-[#1A1F25] border-b border-[#2A2F36] px-4">
+      {tabs.map((tab) => {
+        const isActive = pathname.includes(
+          `/leagues/${leagueId}/${tab.path}`
+        ) || (tab.path === "" && pathname === `/leagues/${leagueId}`);
+
         return (
           <Link
-            key={t.name}
-            href={t.path}
-            className={`px-3 py-2 rounded-lg font-semibold ${
-              isActive
-                ? "text-[#9FE870] border-b-2 border-[#9FE870]"
-                : "hover:text-white"
-            }`}
+            key={tab.id}
+            href={`/leagues/${leagueId}${tab.path ? `/${tab.path}` : ""}`}
+            className={clsx(
+              "flex-1 text-center py-3 text-sm font-semibold transition-colors",
+              isActive ? "text-[#9FE870] border-b-2 border-[#9FE870]" : "text-gray-400"
+            )}
           >
-            {t.name}
+            {tab.name}
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }
