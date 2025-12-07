@@ -1,4 +1,4 @@
-// src/lib/firebase/client.ts
+"use client";
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
@@ -8,22 +8,32 @@ import {
   browserLocalPersistence,
 } from "firebase/auth";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  // 필요하면 아래 값들도 .env.local에 이미 있을 가능성 높음
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+// ⛔ 서버 빌드에서 절대 실행되면 안됨 → 안전 가드 추가
+function getFirebaseConfig() {
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  };
+}
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// 🔥 브라우저에서만 안전하게 초기화되도록 보호
+let app;
+if (typeof window !== "undefined") {
+  const config = getFirebaseConfig();
+  app = !getApps().length ? initializeApp(config) : getApp();
+} else {
+  // 서버에서는 dummy 값
+  app = null;
+}
 
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+export const auth = app ? getAuth(app) : null;
+export const googleProvider = app ? new GoogleAuthProvider() : null;
 
-// 브라우저 새로고침해도 로그인 유지
-setPersistence(auth, browserLocalPersistence).catch(() => {
-  // 실패해도 치명적이진 않으니 조용히 무시
-});
+// 👇 브라우저에서만 persistence 적용
+if (typeof window !== "undefined" && auth) {
+  setPersistence(auth, browserLocalPersistence).catch(() => {});
+}
