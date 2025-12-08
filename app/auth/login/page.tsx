@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,20 +13,23 @@ import { auth, googleProvider } from "@/lib/firebase/client";
 export default function LoginPage() {
   const router = useRouter();
 
-  // 서버 환경에서 auth가 null이면 렌더만 하고 이벤트 실행 차단
-  if (!auth) {
-    return (
-      <div className="text-center text-white p-10">
-        Firebase 초기화 중...
-      </div>
-    );
-  }
-
-  /* 기존 코드 동일 */
+  const [ready, setReady] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReady(!!auth);
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Firebase 초기화 중...
+      </div>
+    );
+  }
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +42,7 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth!, email, password);
       router.push("/leagues");
     } catch (err: any) {
       console.error(err);
@@ -59,7 +62,7 @@ export default function LoginPage() {
     setError(null);
     try {
       setLoading(true);
-      await signInWithPopup(auth, googleProvider!);
+      await signInWithPopup(auth!, googleProvider!);
       router.push("/leagues");
     } catch (err) {
       console.error(err);
@@ -70,9 +73,51 @@ export default function LoginPage() {
   }
 
   return (
-    /* 기존 UI 그대로 */
     <div className="min-h-screen bg-[#0A2342] flex items-center justify-center px-4">
-      ...
+      <div className="w-full max-w-sm bg-white rounded-xl p-6 shadow-xl">
+        <h1 className="text-2xl font-bold text-center mb-6">로그인</h1>
+
+        {error && <div className="text-red-500 text-center mb-3">{error}</div>}
+
+        <form onSubmit={handleEmailLogin} className="space-y-4">
+          <input
+            type="email"
+            placeholder="이메일"
+            className="w-full px-4 py-2 border rounded-lg"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            type="password"
+            placeholder="비밀번호"
+            className="w-full px-4 py-2 border rounded-lg"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded-lg"
+            disabled={loading}
+          >
+            {loading ? "로그인 중..." : "로그인"}
+          </button>
+        </form>
+
+        <button
+          onClick={handleGoogleLogin}
+          className="w-full bg-red-500 text-white py-2 rounded-lg mt-3"
+        >
+          구글로 로그인
+        </button>
+
+        <div className="text-center mt-4">
+          <Link href="/auth/signup" className="text-blue-600">
+            계정이 없으신가요? 회원가입
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

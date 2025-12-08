@@ -1,87 +1,64 @@
-// app/api/leagues/[leagueId]/teams/route.ts
 import { NextRequest } from "next/server";
-import { db } from "@/lib/server/db";
-import { leagues, leagueTeams, insertLeagueTeamSchema } from "@db/schema.leagues";
-import { eq, and } from "drizzle-orm";
-import { created, badRequest, serverError } from "@/lib/server/respond";
+import { db, dbSchema } from "@/lib/server/db";
+import { eq } from "drizzle-orm";
 
-export const runtime = "nodejs";
-
-// POST /api/leagues/[leagueId]/teams
-export async function POST(
+// GET /api/leagues/:leagueId
+export async function GET(
   req: NextRequest,
-  { params }: { params: { leagueId: string } }
+  context: { params: { leagueId: string } }
 ) {
   try {
+    const leagueId = Number(context.params.leagueId);
+
     if (!db) {
-      return serverError("데이터베이스가 설정되지 않았습니다.");
+      return new Response(JSON.stringify({ error: "DB 연결 오류" }), {
+        status: 500,
+      });
     }
 
-    /* ------------------------------- leagueId 검증 ------------------------------ */
-    const leagueId = Number(params.leagueId);
-    if (Number.isNaN(leagueId)) {
-      return badRequest("유효하지 않은 leagueId 입니다.");
-    }
-
-    /* ----------------------------- body → clubId 파싱 ----------------------------- */
-    const json = await req.json();
-    const parsed = insertLeagueTeamSchema
-      .pick({ clubId: true })
-      .safeParse(json);
-
-    if (!parsed.success) {
-      return badRequest("잘못된 요청 데이터입니다.", parsed.error.flatten());
-    }
-
-    // 🎯 clubId 타입 명확히 number 로 고정 (빌드 오류 해결 핵심)
-    const clubId: number = Number(parsed.data.clubId);
-
-    if (Number.isNaN(clubId)) {
-      return badRequest("clubId는 숫자여야 합니다.");
-    }
-
-    /* ------------------------------- league 존재 여부 ------------------------------ */
-    const leagueRows = await db
+    // 🔥 1) 리그 기본 정보 가져오기
+    const league = await db
       .select()
-      .from(leagues)
-      .where(eq(leagues.id, leagueId))
-      .limit(1);
+      .from(dbSchema.leagues)
+      .where(eq(dbSchema.leagues.id, leagueId))
+      .then((rows) => rows[0])
+      .catch(() => null);
 
-    if (leagueRows.length === 0) {
-      return badRequest("존재하지 않는 리그입니다.");
+    if (!league) {
+      return new Response(JSON.stringify({ error: "리그를 찾을 수 없습니다." }), {
+        status: 404,
+      });
     }
 
-    /* ------------------------------- 중복 등록 방지 ------------------------------- */
-    const existingRows = await db
-      .select()
-      .from(leagueTeams)
-      .where(
-        and(
-          eq(leagueTeams.leagueId, leagueId),
-          eq(leagueTeams.clubId, clubId)
-        )
-      )
-      .limit(1);
-
-    if (existingRows.length > 0) {
-      return badRequest("이미 이 리그에 등록된 클럽입니다.");
-    }
-
-    /* ------------------------------ 실제 insert 수행 ------------------------------ */
-    const [inserted] = await db
-      .insert(leagueTeams)
-      .values({
-        leagueId,
-        clubId,
+    // 🔥 2) 등록된 팀 목록 가져오기 (league_teams + clubs leftJoin)
+    const teams = await db
+      .select({
+        id: dbSchema.leagueTeams.id,
+        leagueId: dbSchema.leagueTeams.leagueId,
+        clubId: dbSchema.leagueTeams.clubId,
+        name: dbSchema.clubs.name,
+        region: dbSchema.clubs.region,
+        logoUrl: dbSchema.clubs.logoUrl,
       })
-      .returning();
+      .from(dbSchema.leagueTeams)
+      .leftJoin(
+        dbSchema.clubs,
+        eq(dbSchema.leagueTeams.clubId, dbSchema.clubs.id)
+      )
+      .where(eq(dbSchema.leagueTeams.leagueId, leagueId));
 
-    return created({
-      id: inserted.id,
-      leagueId,
-      clubId,
-    });
+    // 🔥 응답 데이터 구조
+    return new Response(
+      JSON.stringify({
+        ...league,
+        teams: teams || [],
+      }),
+      { status: 200 }
+    );
   } catch (err) {
-    return serverError("리그 팀 등록 실패", err);
+    console.error("리그 상세 조회 실패:", err);
+    return new Response(JSON.stringify({ error: "서버 오류" }), {
+      status: 500,
+    });
   }
 }

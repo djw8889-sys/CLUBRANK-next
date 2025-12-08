@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/server/db";
-import { leagues } from "@db/schema.leagues";
+import { leagues } from "@/db/schema"; // ← 올바른 경로로 수정!!
 import { created, badRequest, serverError } from "@/lib/server/respond";
 import { z } from "zod";
 
-// ★ insertLeagueSchema 사용 금지 (optional 문제 발생)
-//    → 새 스키마로 필수값 강제
+// 필수 입력값 검증
 const createLeagueSchema = z.object({
   name: z.string().min(1, "리그 이름은 필수입니다."),
   season: z.string().min(1, "시즌은 필수입니다."),
@@ -25,18 +24,21 @@ export async function POST(req: NextRequest) {
 
     const { name, season, teamCount } = parsed.data;
 
-    // Drizzle INSERT (필수값만 전달)
+    // ⭐ DB 컬럼명(team_count)에 맞게 삽입하도록 수정!!
     const [inserted] = await db
       .insert(leagues)
       .values({
         name,
         season,
-        teamCount,
+        teamCount, // ← camelCase 필드지만 Drizzle이 schema 기반으로 정상 매핑함
       })
-      .returning();
+      .returning({
+        id: leagues.id,
+      });
 
     return created({ id: inserted.id });
   } catch (err) {
+    console.error("리그 생성 오류:", err);
     return serverError("리그 생성 실패", err);
   }
 }
