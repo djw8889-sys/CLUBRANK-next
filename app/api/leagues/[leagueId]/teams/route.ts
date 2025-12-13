@@ -1,64 +1,59 @@
 import { NextRequest } from "next/server";
-import { db, dbSchema } from "@/lib/server/db";
-import { eq } from "drizzle-orm";
+import { db } from "@/lib/server/db";
+import { leagueTeams } from "@/db/schema";
+import { z } from "zod";
 
-// GET /api/leagues/:leagueId
-export async function GET(
+// POST /api/leagues/:leagueId/teams
+export async function POST(
   req: NextRequest,
-  context: { params: { leagueId: string } }
+  { params }: { params: { leagueId: string } }
 ) {
   try {
-    const leagueId = Number(context.params.leagueId);
-
     if (!db) {
-      return new Response(JSON.stringify({ error: "DB 연결 오류" }), {
-        status: 500,
-      });
+      return new Response(
+        JSON.stringify({ error: "DB not initialized" }),
+        { status: 500 }
+      );
     }
 
-    // 🔥 1) 리그 기본 정보 가져오기
-    const league = await db
-      .select()
-      .from(dbSchema.leagues)
-      .where(eq(dbSchema.leagues.id, leagueId))
-      .then((rows) => rows[0])
-      .catch(() => null);
-
-    if (!league) {
-      return new Response(JSON.stringify({ error: "리그를 찾을 수 없습니다." }), {
-        status: 404,
-      });
+    const leagueId = Number(params.leagueId);
+    if (Number.isNaN(leagueId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid leagueId" }),
+        { status: 400 }
+      );
     }
 
-    // 🔥 2) 등록된 팀 목록 가져오기 (league_teams + clubs leftJoin)
-    const teams = await db
-      .select({
-        id: dbSchema.leagueTeams.id,
-        leagueId: dbSchema.leagueTeams.leagueId,
-        clubId: dbSchema.leagueTeams.clubId,
-        name: dbSchema.clubs.name,
-        region: dbSchema.clubs.region,
-        logoUrl: dbSchema.clubs.logoUrl,
-      })
-      .from(dbSchema.leagueTeams)
-      .leftJoin(
-        dbSchema.clubs,
-        eq(dbSchema.leagueTeams.clubId, dbSchema.clubs.id)
-      )
-      .where(eq(dbSchema.leagueTeams.leagueId, leagueId));
+    const body = await req.json();
 
-    // 🔥 응답 데이터 구조
-    return new Response(
-      JSON.stringify({
-        ...league,
-        teams: teams || [],
-      }),
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("리그 상세 조회 실패:", err);
-    return new Response(JSON.stringify({ error: "서버 오류" }), {
-      status: 500,
+    const schema = z.object({
+      teamId: z.number(),
     });
+
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400 }
+      );
+    }
+
+    const { teamId } = parsed.data;
+
+    const [inserted] = await db
+      .insert(leagueTeams)
+      .values({
+        leagueId,
+        teamId,
+      })
+      .returning({ id: leagueTeams.id });
+
+    return new Response(JSON.stringify(inserted), { status: 201 });
+  } catch (err) {
+    console.error(err);
+    return new Response(
+      JSON.stringify({ error: "Server error" }),
+      { status: 500 }
+    );
   }
 }
