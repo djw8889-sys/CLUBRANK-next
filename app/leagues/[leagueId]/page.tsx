@@ -1,6 +1,5 @@
 import { db, dbSchema } from "@/lib/server/db";
-import { eq, and } from "drizzle-orm";
-import Link from "next/link";
+import { eq } from "drizzle-orm";
 
 export default async function LeagueOverviewPage({
   params,
@@ -9,105 +8,77 @@ export default async function LeagueOverviewPage({
 }) {
   const leagueId = Number(params.leagueId);
 
-  if (!db) {
+  if (!db || Number.isNaN(leagueId)) {
     return (
       <div className="text-center text-red-400 mt-10">
-        DB 연결 오류가 발생했습니다.
+        잘못된 요청입니다.
       </div>
     );
   }
 
-  // 🔥 1) 리그 기본 정보 조회
   const league = await db
     .select()
     .from(dbSchema.leagues)
     .where(eq(dbSchema.leagues.id, leagueId))
-    .then((rows) => rows[0])
-    .catch(() => null);
+    .then((rows) => rows[0]);
 
   if (!league) {
     return (
       <div className="text-center text-gray-300 mt-10">
-        리그 정보를 찾을 수 없습니다.
+        리그 정보를 불러올 수 없습니다.
       </div>
     );
   }
 
-  // 🔥 2) 리그에 등록된 팀 목록 조회 (league_teams + clubs 조인)
   const teams = await db
     .select({
       id: dbSchema.leagueTeams.id,
-      clubId: dbSchema.leagueTeams.clubId,
-      name: dbSchema.clubs.name,
-      region: dbSchema.clubs.region,
-      logoUrl: dbSchema.clubs.logoUrl,
+      teamId: dbSchema.leagueTeams.teamId,
+      name: dbSchema.teams.name,
+      logoUrl: dbSchema.teams.logoUrl,
     })
     .from(dbSchema.leagueTeams)
     .leftJoin(
-      dbSchema.clubs,
-      eq(dbSchema.leagueTeams.clubId, dbSchema.clubs.id)
+      dbSchema.teams,
+      eq(dbSchema.leagueTeams.teamId, dbSchema.teams.id)
     )
-    .where(eq(dbSchema.leagueTeams.leagueId, leagueId))
-    .catch(() => []);
+    .where(eq(dbSchema.leagueTeams.leagueId, leagueId));
 
   return (
-    <div className="min-h-screen text-white space-y-6 p-4">
-      {/* 리그 이름 */}
-      <h2 className="text-2xl font-bold">{league.name}</h2>
+    <div className="space-y-6 text-white">
+      <header>
+        <h1 className="text-2xl font-bold">{league.name}</h1>
+        <p className="text-sm text-gray-400">
+          시즌 {league.season}
+        </p>
+      </header>
 
-      {/* 기본 정보 */}
-      <section className="bg-[#1A1F25] p-4 rounded-xl border border-[#2A2F36] space-y-2">
-        <p className="text-gray-300">시즌</p>
-        <p className="text-lg font-semibold">{league.season}</p>
-      </section>
-
-      <section className="bg-[#1A1F25] p-4 rounded-xl border border-[#2A2F36] space-y-2">
-        <p className="text-gray-300">팀 수</p>
-        <p className="text-lg font-semibold">{league.teamCount}팀</p>
-      </section>
-
-      {/* 🔥 팀 목록 */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">참가 팀 목록</h3>
-          <Link
-            href={`/leagues/${leagueId}/teams`}
-            className="bg-primary px-3 py-2 rounded-lg text-background text-sm font-semibold"
-          >
-            팀 추가하기
-          </Link>
-        </div>
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">참가 팀</h2>
 
         {teams.length === 0 && (
-          <div className="bg-[#1A1F25] p-4 rounded-xl border border-[#2A2F36]">
-            <p className="text-gray-400 text-sm">등록된 팀이 없습니다.</p>
+          <div className="text-gray-400">
+            아직 참가한 팀이 없습니다.
           </div>
         )}
 
-        {/* 팀 리스트 */}
         {teams.map((team) => (
           <div
             key={team.id}
-            className="flex items-center gap-4 bg-[#1A1F25] p-4 rounded-xl border border-[#2A2F36]"
+            className="flex items-center gap-3 rounded-xl border border-slate-700 p-3"
           >
-            {/* 로고 */}
-            <div className="w-12 h-12 rounded-full bg-[#2A2F36] flex items-center justify-center overflow-hidden">
-              {team.logoUrl ? (
-                <img
-                  src={team.logoUrl}
-                  alt="logo"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-gray-400 text-sm">No Logo</span>
-              )}
-            </div>
-
-            {/* 팀 정보 */}
-            <div>
-              <p className="text-lg font-semibold">{team.name}</p>
-              <p className="text-gray-400 text-sm">{team.region || "-"}</p>
-            </div>
+            {team.logoUrl ? (
+              <img
+                src={team.logoUrl}
+                alt={team.name}
+                className="h-8 w-8 rounded"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded bg-slate-700" />
+            )}
+            <span className="font-medium">
+              {team.name ?? "이름 없음"}
+            </span>
           </div>
         ))}
       </section>
