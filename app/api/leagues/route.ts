@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       .values({
         name,
         season,
-        teamCount,
+        totalTeams: teamCount, // ✅ 핵심 수정
         status: "draft",
       })
       .returning({ id: leagues.id });
