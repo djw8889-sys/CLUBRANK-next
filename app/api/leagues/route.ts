@@ -4,9 +4,8 @@ import { leagues } from "@/db/schema";
 import { z } from "zod";
 
 const createLeagueSchema = z.object({
-  name: z.string().min(1),
-  season: z.string().min(1),
-  teamCount: z.number().min(2),
+  name: z.string().min(1, "리그 이름은 필수입니다."),
+  season: z.string().min(1, "시즌은 필수입니다."),
 });
 
 export async function POST(req: NextRequest) {
@@ -28,14 +27,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, season, teamCount } = parsed.data;
+    const { name, season } = parsed.data;
 
     const [inserted] = await db
       .insert(leagues)
       .values({
         name,
         season,
-        totalTeams: teamCount, // ✅ 핵심 수정
         status: "draft",
       })
       .returning({ id: leagues.id });
@@ -45,7 +43,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    console.error(err);
+    console.error("[CREATE_LEAGUE_ERROR]", err);
     return new Response(
       JSON.stringify({ error: "Server error" }),
       { status: 500 }
