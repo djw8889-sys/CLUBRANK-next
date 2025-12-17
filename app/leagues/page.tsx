@@ -3,6 +3,7 @@ import { db, dbSchema } from "@/lib/server/db";
 import { desc } from "drizzle-orm";
 
 export default async function LeaguesPage() {
+  // DB 연결 확인
   if (!db) {
     return (
       <div className="text-center text-red-400 mt-10">
@@ -44,7 +45,7 @@ export default async function LeaguesPage() {
                   {league.name}
                 </div>
                 <div className="gdly-muted text-xs">
-                  시즌 {league.season} · 팀 {league.teamCount}개
+                  시즌 {league.season} · 팀 {league.totalTeams ?? 0}개
                 </div>
               </div>
 

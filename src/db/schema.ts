@@ -30,8 +30,6 @@ export const clubs = pgTable("clubs", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-/* --------------------------- Zod Insert Schema ---------------------------- */
-
 export const insertClubSchema = createInsertSchema(clubs).omit({
   id: true,
   establishedAt: true,
@@ -103,17 +101,9 @@ export const insertClubMatchSchema = createInsertSchema(clubMatches)
     status: z
       .enum(["pending", "accepted", "rejected", "completed", "cancelled"])
       .default("pending"),
-    matchType: z
-      .enum(["friendly", "tournament", "league"])
-      .default("friendly"),
+    matchType: z.enum(["friendly", "tournament", "league"]).default("friendly"),
     gameFormat: z
-      .enum([
-        "mens_singles",
-        "womens_singles",
-        "mens_doubles",
-        "womens_doubles",
-        "mixed_doubles",
-      ])
+      .enum(["mens_singles", "womens_singles", "mens_doubles", "womens_doubles", "mixed_doubles"])
       .default("mens_doubles"),
   });
 
@@ -240,7 +230,6 @@ export const insertClubMeetingsSchema = createInsertSchema(clubMeetings)
 
 /* -------------------------------------------------------------------------- */
 /*                                   Teams                                     */
-/*                 (GDLY 전용 팀 – 학교반 / 동아리 / 클럽 팀 등)               */
 /* -------------------------------------------------------------------------- */
 
 export const teams = pgTable("teams", {
@@ -268,25 +257,22 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
 export const leagues = pgTable("leagues", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 150 }).notNull(),
-  description: text("description"),
   season: varchar("season", { length: 10 }).notNull(), // 예: "2025", "2024-25"
-  sportType: varchar("sport_type", { length: 20 }).notNull().default("soccer"), // soccer | futsal
-  status: varchar("status", { length: 20 }).notNull().default("draft"), // draft | active | completed
-  totalTeams: integer("total_teams"),
-  rounds: integer("rounds"),
+  // teamCount 컬럼: 실제 DB 컬럼명은 team_count
+  teamCount: integer("team_count"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  // 만약 DB에 updated_at 컬럼이 있다면 주석을 해제하세요.
+  // updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertLeagueSchema = createInsertSchema(leagues).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
+  // updatedAt: true,
 });
 
 /* -------------------------------------------------------------------------- */
 /*                                League Teams                                 */
-/*      (리그에 참가한 팀과 순위/스탯 – standings API에서 이 테이블을 사용)    */
 /* -------------------------------------------------------------------------- */
 
 export const leagueTeams = pgTable("league_teams", {
@@ -323,7 +309,6 @@ export const insertLeagueTeamSchema = createInsertSchema(leagueTeams).omit({
 
 /* -------------------------------------------------------------------------- */
 /*                                   Matches                                   */
-/*              (리그 라운드로빈으로 생성되는 경기 일정/결과)                  */
 /* -------------------------------------------------------------------------- */
 
 export const matches = pgTable("matches", {
@@ -351,7 +336,6 @@ export const insertMatchSchema = createInsertSchema(matches).omit({
 
 /* -------------------------------------------------------------------------- */
 /*                                Match Goals                                  */
-/*      (각 경기의 득점/도움 기록 – 시즌 득점/도움 랭킹 계산에 사용)          */
 /* -------------------------------------------------------------------------- */
 
 export const matchGoals = pgTable("match_goals", {
@@ -371,7 +355,6 @@ export const insertMatchGoalSchema = createInsertSchema(matchGoals).omit({
 
 /* -------------------------------------------------------------------------- */
 /*                             Match MVP Votes                                 */
-/*     (경기 종료 후 MVP 투표 – 시즌 MVP 산출용 원자료)                        */
 /* -------------------------------------------------------------------------- */
 
 export const matchMvpVotes = pgTable("match_mvp_votes", {
@@ -391,7 +374,6 @@ export const insertMatchMvpVoteSchema = createInsertSchema(matchMvpVotes).omit({
 
 /* -------------------------------------------------------------------------- */
 /*                           League MVP Results                                */
-/*         (시즌 종료 후 최종 MVP / 득점왕 / 도움왕 집계 결과 저장)            */
 /* -------------------------------------------------------------------------- */
 
 export const leagueMvpResults = pgTable("league_mvp_results", {
@@ -427,8 +409,6 @@ export type MatchParticipants = typeof matchParticipants.$inferSelect;
 export type ClubDues = typeof clubDues.$inferSelect;
 export type ClubAttendance = typeof clubAttendance.$inferSelect;
 export type ClubMeetings = typeof clubMeetings.$inferSelect;
-
-// GDLY 전용 타입
 export type Team = typeof teams.$inferSelect;
 export type League = typeof leagues.$inferSelect;
 export type LeagueTeam = typeof leagueTeams.$inferSelect;

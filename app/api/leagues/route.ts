@@ -3,28 +3,26 @@ import { db } from "@/lib/server/db";
 import { leagues } from "@/db/schema";
 import { z } from "zod";
 
-const createLeagueSchema = z.object({
-  name: z.string().min(1, "리그 이름은 필수입니다."),
-  season: z.string().min(1, "시즌은 필수입니다."),
+const schema = z.object({
+  name: z.string().min(1),
+  season: z.string().min(1),
 });
 
 export async function POST(req: NextRequest) {
   try {
     if (!db) {
-      return new Response(
-        JSON.stringify({ error: "DB not initialized" }),
-        { status: 500 }
-      );
+      return new Response(JSON.stringify({ error: "DB not initialized" }), {
+        status: 500,
+      });
     }
 
     const body = await req.json();
-    const parsed = createLeagueSchema.safeParse(body);
+    const parsed = schema.safeParse(body);
 
     if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request body" }),
-        { status: 400 }
-      );
+      return new Response(JSON.stringify({ error: "Invalid body" }), {
+        status: 400,
+      });
     }
 
     const { name, season } = parsed.data;
@@ -43,10 +41,9 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (err) {
-    console.error("[CREATE_LEAGUE_ERROR]", err);
-    return new Response(
-      JSON.stringify({ error: "Server error" }),
-      { status: 500 }
-    );
+    console.error(err);
+    return new Response(JSON.stringify({ error: "Server error" }), {
+      status: 500,
+    });
   }
 }
