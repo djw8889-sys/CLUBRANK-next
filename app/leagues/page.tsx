@@ -12,7 +12,7 @@ export default async function LeaguesPage() {
     );
   }
 
-  // 🔥 실제 리그 데이터 불러오기
+  // 리그 데이터 조회
   const leagues = await db
     .select()
     .from(dbSchema.leagues)
@@ -23,7 +23,6 @@ export default async function LeaguesPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-textPrimary">리그</h1>
-
         <Link
           href="/leagues/create"
           className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-background"
@@ -45,10 +44,9 @@ export default async function LeaguesPage() {
                   {league.name}
                 </div>
                 <div className="gdly-muted text-xs">
-                  시즌 {league.season} · 팀 {league.totalTeams ?? 0}개
+                  시즌 {league.season} · 팀 {league.teamCount ?? 0}개
                 </div>
               </div>
-
               <span className="text-sm text-primary">자세히 보기 →</span>
             </Link>
           ))}

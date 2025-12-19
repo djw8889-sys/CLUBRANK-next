@@ -11,30 +11,35 @@ export default function LeagueTeamRegisterPage({
   const leagueId = Number(params.leagueId);
   const router = useRouter();
 
-  const [clubs, setClubs] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [registeredTeams, setRegisteredTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // 🔥 리그에 등록된 팀 목록 + 전체 클럽 목록 조회
+  // 🔥 리그에 등록된 팀 목록 + 전체 팀 목록 조회
   useEffect(() => {
     async function loadData() {
       try {
-        const [teamsRes, clubsRes] = await Promise.all([
-          fetch(`/api/leagues/${leagueId}`), // 리그 정보를 포함한 팀 목록
-          fetch(`/api/clubs`),               // 모든 클럽 목록
+        const [registeredRes, allTeamsRes] = await Promise.all([
+          // GET 리그 참가 팀
+          fetch(`/api/leagues/${leagueId}/teams`),
+          // GET 전체 팀
+          fetch(`/api/teams`),
         ]);
 
-        const teamData = await teamsRes.json();
-        const clubsData = await clubsRes.json();
+        const registeredData = await registeredRes.json();
+        const allTeamsData = await allTeamsRes.json();
 
-        if (!Array.isArray(teamData.teams)) {
+        if (!Array.isArray(registeredData.teams)) {
           throw new Error("리그 팀 데이터 오류");
         }
+        if (!Array.isArray(allTeamsData.teams)) {
+          throw new Error("팀 목록 데이터 오류");
+        }
 
-        setRegisteredTeams(teamData.teams);
-        setClubs(clubsData);
+        setRegisteredTeams(registeredData.teams);
+        setTeams(allTeamsData.teams);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -45,14 +50,14 @@ export default function LeagueTeamRegisterPage({
     loadData();
   }, [leagueId]);
 
-  async function registerTeam(clubId: number) {
+  async function registerTeam(teamId: number) {
     try {
       setSubmitting(true);
 
       const res = await fetch(`/api/leagues/${leagueId}/teams`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clubId }),
+        body: JSON.stringify({ teamId }),
       });
 
       if (!res.ok) {
@@ -60,6 +65,7 @@ export default function LeagueTeamRegisterPage({
         throw new Error(data.error || "팀 등록 실패");
       }
 
+      // 등록 성공 시 리그 상세로 이동
       router.push(`/leagues/${leagueId}`);
     } catch (err: any) {
       setError(err.message);
@@ -83,8 +89,8 @@ export default function LeagueTeamRegisterPage({
   }
 
   // 이미 등록된 팀 제외
-  const registeredClubIds = new Set(registeredTeams.map((t) => t.clubId));
-  const availableClubs = clubs.filter((club) => !registeredClubIds.has(club.id));
+  const registeredTeamIds = new Set(registeredTeams.map((t) => t.teamId));
+  const availableTeams = teams.filter((team) => !registeredTeamIds.has(team.id));
 
   return (
     <div className="min-h-screen bg-[#0A2342] text-white p-6 space-y-6">
@@ -108,28 +114,27 @@ export default function LeagueTeamRegisterPage({
         )}
       </section>
 
-      {/* 등록 가능한 클럽 목록 */}
+      {/* 등록 가능한 팀 목록 */}
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">등록 가능한 클럽</h2>
+        <h2 className="text-lg font-semibold">등록 가능한 팀</h2>
 
-        {availableClubs.length === 0 ? (
+        {availableTeams.length === 0 ? (
           <p className="text-gray-400 text-sm">
-            등록 가능한 클럽이 없습니다.
+            등록 가능한 팀이 없습니다.
           </p>
         ) : (
-          availableClubs.map((club) => (
+          availableTeams.map((team) => (
             <div
-              key={club.id}
+              key={team.id}
               className="flex justify-between items-center p-3 rounded bg-[#1A1F25] border border-[#2A2F36]"
             >
               <div>
-                <p className="font-semibold">{club.name}</p>
-                <p className="text-gray-400 text-sm">{club.region || "-"}</p>
+                <p className="font-semibold">{team.name}</p>
               </div>
 
               <button
                 disabled={submitting}
-                onClick={() => registerTeam(club.id)}
+                onClick={() => registerTeam(team.id)}
                 className="bg-primary px-3 py-2 text-background rounded text-sm font-semibold disabled:bg-primary/50"
               >
                 등록

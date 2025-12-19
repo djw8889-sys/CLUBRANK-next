@@ -1,58 +1,82 @@
 import { NextRequest } from "next/server";
-import { db } from "@/lib/server/db";
-import { leagueTeams } from "@/db/schema";
-import { z } from "zod";
+import { db, dbSchema } from "@/lib/server/db";
+import { eq } from "drizzle-orm";
 
-// POST /api/leagues/:leagueId/teams
+/**
+ * GET /api/leagues/:leagueId/teams
+ * - 특정 리그에 등록된 팀 목록 조회
+ * - JOIN 없이 league_teams 단독 조회 (가장 안전)
+ */
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { leagueId: string } }
+) {
+  try {
+    const leagueId = Number(params.leagueId);
+
+    if (Number.isNaN(leagueId)) {
+      return Response.json(
+        { error: "Invalid leagueId" },
+        { status: 400 }
+      );
+    }
+
+    const teams = await db
+      .select()
+      .from(dbSchema.leagueTeams)
+      .where(eq(dbSchema.leagueTeams.leagueId, leagueId));
+
+    return Response.json({ teams }, { status: 200 });
+  } catch (error) {
+    console.error("[GET_LEAGUE_TEAMS_ERROR]", error);
+    return Response.json(
+      { error: "리그 팀 목록 조회 실패" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/leagues/:leagueId/teams
+ * - 리그에 팀 참가
+ * - body: { teamId: number }
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: { leagueId: string } }
 ) {
   try {
-    if (!db) {
-      return new Response(
-        JSON.stringify({ error: "DB not initialized" }),
-        { status: 500 }
-      );
-    }
-
     const leagueId = Number(params.leagueId);
     if (Number.isNaN(leagueId)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid leagueId" }),
+      return Response.json(
+        { error: "Invalid leagueId" },
         { status: 400 }
       );
     }
 
     const body = await req.json();
+    const teamId = Number(body?.teamId);
 
-    const schema = z.object({
-      teamId: z.number(),
-    });
-
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request body" }),
+    if (!teamId || Number.isNaN(teamId)) {
+      return Response.json(
+        { error: "Invalid teamId" },
         { status: 400 }
       );
     }
 
-    const { teamId } = parsed.data;
-
     const [inserted] = await db
-      .insert(leagueTeams)
+      .insert(dbSchema.leagueTeams)
       .values({
         leagueId,
         teamId,
       })
-      .returning({ id: leagueTeams.id });
+      .returning({ id: dbSchema.leagueTeams.id });
 
-    return new Response(JSON.stringify(inserted), { status: 201 });
-  } catch (err) {
-    console.error(err);
-    return new Response(
-      JSON.stringify({ error: "Server error" }),
+    return Response.json(inserted, { status: 201 });
+  } catch (error) {
+    console.error("[REGISTER_TEAM_ERROR]", error);
+    return Response.json(
+      { error: "Server error" },
       { status: 500 }
     );
   }
